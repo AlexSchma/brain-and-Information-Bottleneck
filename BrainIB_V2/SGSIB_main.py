@@ -78,7 +78,7 @@ if __name__ == '__main__':
             acc_train_list[fold_idx] = max_acc_train
             max_acc_test = max(max_acc_test, acc_test)
             acc_test_list[fold_idx] = max_acc_test
-            print(f'best accuracy in epoch {epoch} (train / test): ({max_acc_train} / {max_acc_test})')
+            print(f'best accuracy in epoch {epoch} (train / test): ({max_acc_train} / {max_acc_test}) of fold {fold_idx}')
 
             savedir = "./SGSIB/model/GNN_model" + str(fold_idx)
             if not osp.exists(savedir):

@@ -46,11 +46,22 @@ class GNN(nn.Module):
     def forward(self, graph_batch, edge_weight=None):
         # edge_index, x, edge_attr, y, batch, ptr = graph_batch
         graph_batch = graph_batch.to(self.device)
-        node_features_1 = F.relu(self.graph_conv_1(x=graph_batch.x, edge_index=graph_batch.edge_index, edge_weight=graph_batch.edge_attr))
-        node_features_2 = F.relu(self.graph_conv_2(x=node_features_1, edge_index=graph_batch.edge_index, edge_weight=graph_batch.edge_attr))        
+        # print(f"Graph batch.x shape: {graph_batch.x.shape}, dtype: {graph_batch.x.dtype}")
+        # print(f"Graph batch.edge_index shape: {graph_batch.edge_index.shape}, dtype: {graph_batch.edge_index.dtype}")
+        # print(f"Graph batch.edge_attr shape: {graph_batch.edge_attr.shape if graph_batch.edge_attr is not None else 'None'}, dtype: {graph_batch.edge_attr.dtype if graph_batch.edge_attr is not None else 'None'}")
+        # print(f"Graph batch.y shape: {graph_batch.y.shape if graph_batch.y is not None else 'None'}, dtype: {graph_batch.y.dtype if graph_batch.y is not None else 'None'}")
+        # print(f"Graph batch ptr shape: {graph_batch.ptr.shape if graph_batch.ptr is not None else 'None'}, dtype: {graph_batch.ptr.dtype if graph_batch.ptr is not None else 'None'}")
+        # # print(f"Graph batch x[0]: {graph_batch.x[0] if graph_batch.x is not None else 'None'}")
+        # # print(f"Graph batch_index[0]: {graph_batch.edge_index[0]}")
+        # print(f"Graph batch_attr: {graph_batch.edge_attr}")
+        # print(f"x: {graph_batch.x}")
+        # print(f"edge_index: {graph_batch.edge_index}")
+        # print(f"edge_attr: {graph_batch.edge_attr}")
+        node_features_1 = F.relu(self.graph_conv_1(x=graph_batch.x, edge_index=graph_batch.edge_index))
+        node_features_2 = F.relu(self.graph_conv_2(x=node_features_1, edge_index=graph_batch.edge_index))        
         node_features_ = F.dropout(node_features_2, p=0.5, training=self.training)
+
         normalized_node_features = F.normalize(node_features_, dim=1)
-        
         def sep_graph(node_features, ptr):
             graphs = []
             for i in range(len(ptr)-1):
@@ -60,7 +71,6 @@ class GNN(nn.Module):
             return(graphs)
 
         normalized_node_features = sep_graph(normalized_node_features, graph_batch.ptr)
-
         HH_tensor = torch.Tensor()
 
         for graph in normalized_node_features:
@@ -72,6 +82,6 @@ class GNN(nn.Module):
                 HH_tensor = torch.cat((HH_tensor, temp), dim=0)
 
         output = F.dropout(self.MLP_1(HH_tensor), p=0.5, training=self.training)
-        
+      
         torch.cuda.empty_cache()
         return HH_tensor, output

@@ -18,6 +18,7 @@ from scipy.spatial.distance import pdist, squareform
 import time
 
 
+
 def separate_data(graph_list, seed, fold_idx):
     """
     Separate the dataset into trainsets and testsets (list of graph)
@@ -54,8 +55,13 @@ def renyi_entropy(x,sigma):
     """
     alpha = 5
     k = calculate_gram_mat(x,sigma)
-    k = k/torch.trace(k) 
-    eigv = torch.abs(torch.symeig(k, eigenvectors=True)[0])
+ 
+    k = k/torch.trace(k)
+    # eigv = torch.abs(torch.symeig(k, eigenvectors=True)[0]) python 1.9
+
+    m = torch.linalg.eigh(k, UPLO='L')[0]
+    eigv = torch.abs(m)
+
     eig_pow = eigv**alpha
     entropy = (1/(1-alpha))*torch.log2(torch.sum(eig_pow))
     return entropy
@@ -70,7 +76,9 @@ def joint_entropy(x,y,s_x,s_y):
     y = calculate_gram_mat(y,s_y)
     k = torch.mul(x,y)
     k = k/torch.trace(k)
-    eigv = torch.abs(torch.symeig(k, eigenvectors=True)[0])
+    #eigv = torch.abs(torch.symeig(k, eigenvectors=True)[0]) python 1.9
+    eigv = torch.abs(torch.linalg.eigh(k, UPLO='L')[0])
+
     eig_pow =  eigv**alpha
     entropy = (1/(1-alpha))*torch.log2(torch.sum(eig_pow))
 
@@ -109,7 +117,10 @@ def train(args, model, train_dataset, optimizer, epoch, SG_model, device, criter
             model.train()
             SG_model.train()
             graphs = train_dataset[i : i + args.batch_size]
+            #print(graphs.x, graphs.edge_index, graphs.y)
             batch_graph = next(iter(DataLoader(graphs, batch_size=len(graphs))))
+            #batch_graph = next(iter(DataLoader(torch.utils.data.Subset(train_dataset, list(range(i, i + args.batch_size))),
+            #                      batch_size=args.batch_size)))
 
             embeddings, original_output = model(batch_graph)
             
@@ -118,7 +129,9 @@ def train(args, model, train_dataset, optimizer, epoch, SG_model, device, criter
             positive_penalty = torch.Tensor([0.0]).float().to(device)
            
             for graph in subgraphs:
+                
                 subgraph, pos = SG_model(graph)
+                
                 graph = subgraph.to(device)
                 positive_penalty += pos
 
@@ -140,7 +153,7 @@ def train(args, model, train_dataset, optimizer, epoch, SG_model, device, criter
                 k = k[~np.eye(k.shape[0], dtype=bool)].reshape(k.shape[0], -1)
                 sigma2 = np.mean(np.sort(k[:, :10], 1))
 
-
+            
             mi_loss = calculate_MI(embeddings, positive, sigma1**2, sigma2**2) / len(graphs)
             labels = batch_graph.y.view(-1,).to(device)
 
@@ -165,8 +178,6 @@ def train(args, model, train_dataset, optimizer, epoch, SG_model, device, criter
             
             pbar.set_description(f'epoch: {epoch}')
 
-    print(loss_accum)
-    print(len(indices))
     average_loss = loss_accum / len(indices)
     average_miloss = miloss_accum / len(indices)
     print(f"Loss Training: {average_loss}\tMutual Information Loss: {average_miloss}")

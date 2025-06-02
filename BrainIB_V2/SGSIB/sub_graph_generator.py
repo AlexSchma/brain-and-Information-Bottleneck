@@ -66,6 +66,7 @@ class MLP_subgraph(nn.Module):
     
 
     def forward(self, graph):
+        #print("graph:",graph)
         subgraph = graph.to(self.device)
         edge_prob_matrix = self._edge_prob_mat(subgraph)
         # print(edge_prob_matrix.shape)

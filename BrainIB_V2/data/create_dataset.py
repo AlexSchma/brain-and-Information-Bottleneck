@@ -20,7 +20,8 @@ def read_dataset():
         graph_struct = data['graph_struct'][0]
 
         edge = torch.Tensor(graph_struct[graph_index]['edge'])
-
+        # print(f"edge shape: {edge.shape}, edge type: {edge.dtype}")
+        # print(edge)
         ROI = torch.Tensor(graph_struct[graph_index]['ROI'])
 
         node_tags = torch.Tensor(graph_struct[graph_index]['node_tags'])
