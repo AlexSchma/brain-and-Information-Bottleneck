@@ -70,7 +70,7 @@ class MLP_subgraph(nn.Module):
         subgraph = graph.to(self.device)
         edge_prob_matrix = self._edge_prob_mat(subgraph)
         # print(edge_prob_matrix.shape)
-        subgraph.attr = edge_prob_matrix
-
+        #subgraph.attr = edge_prob_matrix
+        subgraph.edge_attr = edge_prob_matrix
         pos_penalty = edge_prob_matrix.var()
         return subgraph, pos_penalty

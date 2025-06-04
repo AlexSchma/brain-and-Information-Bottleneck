@@ -1,5 +1,6 @@
 from tqdm import tqdm
 import copy
+import random
 
 from torch_geometric.nn import MessagePassing
 
@@ -102,6 +103,7 @@ def train(args, model, train_dataset, optimizer, epoch, SG_model, device, criter
     """
     A function used to train the model that feeds all the training data into the model once per execution
     """
+    random.shuffle(train_dataset)
     # model.train()
     # SG_model.train()
     total_iters = args.iters_per_epoch
@@ -117,13 +119,13 @@ def train(args, model, train_dataset, optimizer, epoch, SG_model, device, criter
             model.train()
             SG_model.train()
             graphs = train_dataset[i : i + args.batch_size]
-            #print(graphs.x, graphs.edge_index, graphs.y)
+            
+            #print(graphs[0].edge_index.shape)
             batch_graph = next(iter(DataLoader(graphs, batch_size=len(graphs))))
             #batch_graph = next(iter(DataLoader(torch.utils.data.Subset(train_dataset, list(range(i, i + args.batch_size))),
             #                      batch_size=args.batch_size)))
 
             embeddings, original_output = model(batch_graph)
-            
             subgraphs = copy.deepcopy(graphs)
 
             positive_penalty = torch.Tensor([0.0]).float().to(device)
@@ -138,8 +140,13 @@ def train(args, model, train_dataset, optimizer, epoch, SG_model, device, criter
             positive_penalty = (positive_penalty / len(subgraphs))
             batch_subgraph = next(iter(DataLoader(subgraphs, batch_size=len(subgraphs))))
 
+            for idx in range(len(batch_subgraph)):
+
+                print("before", batch_graph[idx].edge_attr)
+                print("after", batch_subgraph[idx].edge_attr)
+
             positive, subgraph_output = model(batch_subgraph)
-            
+
             # calculate to sigma1 and sigma2
             with torch.no_grad():
                 Z_numpy1 = embeddings.cpu().detach().numpy()
@@ -156,7 +163,6 @@ def train(args, model, train_dataset, optimizer, epoch, SG_model, device, criter
             
             mi_loss = calculate_MI(embeddings, positive, sigma1**2, sigma2**2) / len(graphs)
             labels = batch_graph.y.view(-1,).to(device)
-
             regularization_loss = 0
             for param in model.parameters():
                 regularization_loss += torch.sum(torch.abs(param))

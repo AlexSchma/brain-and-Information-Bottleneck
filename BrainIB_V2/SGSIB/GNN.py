@@ -57,8 +57,13 @@ class GNN(nn.Module):
         # print(f"x: {graph_batch.x}")
         # print(f"edge_index: {graph_batch.edge_index}")
         # print(f"edge_attr: {graph_batch.edge_attr}")
-        node_features_1 = F.relu(self.graph_conv_1(x=graph_batch.x, edge_index=graph_batch.edge_index))
-        node_features_2 = F.relu(self.graph_conv_2(x=node_features_1, edge_index=graph_batch.edge_index))        
+        # for i in range(10):
+        #     edge1 = graph_batch.edge_index[0][i].item()
+        #     edge2 = graph_batch.edge_index[1][i].item()
+        #     print(f"Edge {i}: {edge1} -> {edge2}, from x: {graph_batch.x[edge1][edge2].item()}, edge_attr: {graph_batch.edge_attr[i].item()}")
+
+        node_features_1 = F.relu(self.graph_conv_1(x=graph_batch.x, edge_index=graph_batch.edge_index, edge_weight=graph_batch.edge_attr))
+        node_features_2 = F.relu(self.graph_conv_2(x=node_features_1, edge_index=graph_batch.edge_index, edge_weight=graph_batch.edge_attr))        
         node_features_ = F.dropout(node_features_2, p=0.5, training=self.training)
 
         normalized_node_features = F.normalize(node_features_, dim=1)

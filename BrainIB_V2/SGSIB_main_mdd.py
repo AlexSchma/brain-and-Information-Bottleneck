@@ -4,7 +4,7 @@ import argparse
 
 import torch
 import torch.nn.functional as F
-
+import random
 import numpy as np
 
 from torch_geometric.loader import DataLoader
@@ -14,6 +14,8 @@ from SGSIB.sub_graph_generator import MLP_subgraph
 # from SGSIB.utils_of import train, test, separate_data
 from SGSIB.utils import train, test, separate_data
 from data.create_dataset import read_dataset
+from data.dataset import BrIB_RESTfMRIDataset
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ABIDE')
@@ -38,7 +40,13 @@ if __name__ == '__main__':
     torch.manual_seed(0)
     np.random.seed(0)
     
-    dataset = read_dataset()
+    full_dataset = BrIB_RESTfMRIDataset(
+         metadata_path="../../Data/metadata.csv",
+        data_dir="../../Data/fMRI/AAL",
+        split="full"
+    )
+    dataset = [data for data in full_dataset]
+    random.shuffle(dataset)
 
     num_node_features = 116
     num_edge_features = 1
@@ -57,6 +65,7 @@ if __name__ == '__main__':
         
         train_dataset, test_dataset = separate_data(dataset, args.seed, fold_idx)
         
+        print(f"Fold {fold_idx + 1} - Train dataset size: {len(train_dataset)}, Test dataset size: {len(test_dataset)}")
         # Instantiate the backbone network
         model = GNN(num_of_features=num_node_features, device=device).to(device)
         # Instantiate the subgraph generator

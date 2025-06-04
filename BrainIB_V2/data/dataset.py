@@ -182,11 +182,21 @@ class BrIB_RESTfMRIDataset(Dataset):
             # Transform correlation matrix to adjacency matrix
             node_features = torch.tensor(corr, dtype=torch.float32)
             topk = node_features.reshape(-1)
-            topk, _ = torch.sort(abs(topk), dim=0, descending=True)
+            topk, _ = torch.sort(topk, dim=0, descending=True)
+            #topk, _ = torch.sort(abs(topk), dim=0, descending=True) #introduced by jakob to take both positive and negative correlations into account
+            #but negative edge weights break the model
+
             threshold = topk[int(node_features.shape[0] ** 2 / 20 * 2)]
             # TODO: Fix a bug in the line below, where edge_indices might have
             # different shapes because of multiples of the same correlation value
-            adj = (torch.abs(node_features) >= threshold).to(int)
+            adj = (node_features >= threshold).to(int)
+
+            #jakob: changed to only take positive correlations into account
+            #but this might not be the best solution, as it breaks the model
+            #adj = (torch.abs(node_features) >= threshold).to(int)
+
+
+
             edge_index = dense_to_sparse(adj)[0]
 
             edge_weight = node_features[edge_index[0], edge_index[1]].unsqueeze(1)

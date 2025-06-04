@@ -1,6 +1,7 @@
 import os
 import os.path as osp
 import argparse
+import random
 
 import torch
 import torch.nn.functional as F
@@ -11,14 +12,16 @@ from torch_geometric.loader import DataLoader
 
 from SGSIB.GNN import GNN
 from SGSIB.sub_graph_generator import MLP_subgraph
+# from SGSIB.utils_of import train, test
 from SGSIB.utils import train, test
+
 
 from data.dataset import BrIB_RESTfMRIDataset
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MDD SGSIB')
     parser.add_argument('--iters_per_epoch', type=int, default=1)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--mi_weight', type=float, default=0.001)
     parser.add_argument('--pos_weight', type=float, default=0.001)
@@ -50,6 +53,7 @@ if __name__ == '__main__':
     )
     train_dataset = [data for data in train_dataset]
     dev_dataset = [data for data in dev_dataset]
+    random.shuffle(train_dataset)
 
     # train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     # dev_loader = DataLoader(dev_dataset, batch_size=args.batch_size, shuffle=False)
@@ -65,7 +69,7 @@ if __name__ == '__main__':
         {'params': SG_model.parameters(), 'lr': args.SGmodel_learning_rate}
     ])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
-
+    
     for epoch in range(1, args.epochs + 1):
         avg_loss, mi_loss = train(args, model, train_dataset, optimizer, epoch, SG_model, device)
         acc_train, acc_dev, dev_loss = test(args, model, train_dataset, dev_dataset, SG_model, device)
