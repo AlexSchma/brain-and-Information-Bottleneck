@@ -27,6 +27,36 @@ class S2VGraph(object):
 
         self.max_neighbor = 0
 
+def convert_brib_to_s2vgraph(dataset):
+    s2v_graphs = []
+
+    for i in range(len(dataset)):
+        data = dataset[i]
+        node_features = data.x
+        edge_index = data.edge_index
+        label = data.y.item()
+
+        # Create NetworkX graph from edge_index
+        g = nx.Graph()
+        g.add_nodes_from(range(node_features.shape[0]))
+        g.add_edges_from(edge_index.t().tolist())
+
+        # Create adjacency matrix (optional, for consistency)
+        adj = torch.zeros((node_features.shape[0], node_features.shape[0]))
+        adj[edge_index[0], edge_index[1]] = 1
+
+        node_tags = list(range(node_features.shape[0]))  # dummy tags
+
+        s2v = S2VGraph(g=g, label=label, node_tags=node_tags)
+        s2v.node_features = node_features
+        s2v.edge_index = edge_index
+        s2v.adj = adj
+        s2v.edge_mat = edge_index  # required by BrainIB
+
+        s2v_graphs.append(s2v)
+
+    return s2v_graphs
+
 
 def load_data(graph):
 
@@ -39,11 +69,17 @@ def load_data(graph):
     n=116 # num of nodes
     for i in range(num_graphs):  
         node_features = torch.FloatTensor(graph["graph_struct"][0][i][1])
+        print("node_features shape:", node_features.shape)
         tepk = node_features.reshape(-1,1)
         tepk, indices = torch.sort(abs(tepk), dim=0, descending=True)
         mk = tepk[int(math.pow(node_features.shape[0],2) / 20*2)]
         adj = torch.Tensor(np.where(node_features > mk, 1, 0))
+        # # Make adjacency symmetric
+        # adj = torch.where(node_features > mk, 1, 0)
+        # adj = torch.maximum(adj, adj.T)  # Ensure symmetry
+
         edge_index=dense_to_sparse(adj)[0]
+        print("edge_index shape:", edge_index.shape)
         node_tags=list(range(0, 116))
         for j in range(n):
             g.add_node(j)
